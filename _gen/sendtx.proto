@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package _gen;
+
+message Coin {
+    int64 amount = 1;
+    string denom = 2;
+}
+
+message SendMsg {
+    bytes sender = 1;
+    bytes recipient = 2;
+    Coin amount = 3;
+}
+
+message IssueMsg {
+    bytes recipient = 1;
+    Coin amount = 2;
+}
+
+message Tx {
+    Coin fee = 1;
+
+    // oneof field :)
+    oneof Msg {
+        SendMsg send = 2;
+        IssueMsg issue = 3;
+    }
+
+    // after all the message options
+    repeated Sig signatures = 32;
+}
+
+// Sig is a placeholder, we do not parse it...
+message Sig {
+    bytes unknown = 1;
+}

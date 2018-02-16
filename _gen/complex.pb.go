@@ -6,11 +6,17 @@ Package _gen is a generated protocol buffer package.
 
 It is generated from these files:
 	complex.proto
+	sendtx.proto
 	simple.proto
 
 It has these top-level messages:
 	PhoneNumber
 	PhoneBook
+	Coin
+	SendMsg
+	IssueMsg
+	Tx
+	Sig
 	Person
 	Employee
 	Mixed

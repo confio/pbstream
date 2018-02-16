@@ -67,6 +67,43 @@ var outputs = []struct {
 		},
 		"phonebook.bin",
 	},
+	{
+		&data.Tx{
+			Fee: &data.Coin{
+				Amount: 500,
+				Denom:  "PHO",
+			},
+			Msg: &data.Tx_Send{
+				&data.SendMsg{
+					Sender:    []byte("12345678901234567890"),
+					Recipient: []byte("qwertyuiopasdfghjkl;"),
+					Amount: &data.Coin{
+						Amount: 18500,
+						Denom:  "ATOM",
+					},
+				},
+			},
+		},
+		"send_msg.bin",
+	},
+	{
+		&data.Tx{
+			Fee: &data.Coin{
+				Amount: 600,
+				Denom:  "SPC",
+			},
+			Msg: &data.Tx_Issue{
+				&data.IssueMsg{
+					Recipient: []byte("G7nh98y7un&YBiuBHO*0"),
+					Amount: &data.Coin{
+						Amount: 777888,
+						Denom:  "WIN",
+					},
+				},
+			},
+		},
+		"issue_msg.bin",
+	},
 }
 
 func main() {
