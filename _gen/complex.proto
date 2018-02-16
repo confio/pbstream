@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package _gen;
+
+message PhoneNumber {
+    string name = 1;
+    string number = 2;
+}
+
+message PhoneBook {
+    string title = 1;
+    repeated PhoneNumber numbers = 2;
+    repeated int64 random = 3;
+    repeated fixed32 codes = 4;
+    int32 views = 5;
+}

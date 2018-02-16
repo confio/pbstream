@@ -1,7 +1,6 @@
 package pbstream
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -9,222 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type check struct {
-	path      []int32
-	isMissing bool
-	eval      checker
-}
-
-func (c check) extractPath(bz []byte) ([]byte, int, error) {
-	return ExtractPath(bz, c.path[0], c.path[1:]...)
-}
-
-type checker func(int, []byte) error
-
-func checkString(expect string) checker {
-	return func(wire int, field []byte) error {
-		if wire != WireLengthPrefix {
-			return fmt.Errorf("Invalid wire type: %d", wire)
-		}
-		str, err := ParseString(field)
-		if err != nil {
-			return err
-		}
-		if str != expect {
-			return fmt.Errorf("Got %s, expected %s", str, expect)
-		}
-		return nil
-	}
-}
-
-func checkBytes(expect []byte) checker {
-	return func(wire int, field []byte) error {
-		if wire != WireLengthPrefix {
-			return fmt.Errorf("Invalid wire type: %d", wire)
-		}
-		bz, err := ParseBytesField(field)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(bz, expect) {
-			return fmt.Errorf("Got %x, expected %x", bz, expect)
-		}
-		return nil
-	}
-}
-
-func checkInt32(expect int32) checker {
-	return func(wire int, field []byte) error {
-		i, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		if int32(i) != expect {
-			return fmt.Errorf("Got %d, expected %d", int32(i), expect)
-		}
-		return nil
-	}
-}
-
-func checkInt64(expect int64) checker {
-	return func(wire int, field []byte) error {
-		i, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		if int64(i) != expect {
-			return fmt.Errorf("Got %d, expected %d", int64(i), expect)
-		}
-		return nil
-	}
-}
-
-func checkSint32(expect int32) checker {
-	return func(wire int, field []byte) error {
-		raw, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		i := int32(UnpackSint(raw))
-		if i != expect {
-			return fmt.Errorf("Got %d, expected %d", i, expect)
-		}
-		return nil
-	}
-}
-
-func checkSint64(expect int64) checker {
-	return func(wire int, field []byte) error {
-		raw, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		i := int64(UnpackSint(raw))
-		if i != expect {
-			return fmt.Errorf("Got %d, expected %d", i, expect)
-		}
-		return nil
-	}
-}
-
-func checkUint32(expect uint32) checker {
-	return func(wire int, field []byte) error {
-		i, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		if uint32(i) != expect {
-			return fmt.Errorf("Got %d, expected %d", uint32(i), expect)
-		}
-		return nil
-	}
-}
-
-func checkUint64(expect uint64) checker {
-	return func(wire int, field []byte) error {
-		i, _, err := ParseAnyInt(wire, field)
-		if err != nil {
-			return err
-		}
-		if i != expect {
-			return fmt.Errorf("Got %d, expected %d", i, expect)
-		}
-		return nil
-	}
-}
-
-func checkFloat64(expect float64) checker {
-	return func(wire int, field []byte) error {
-		f, err := ParseFloat64(wire, field)
-		if err != nil {
-			return err
-		}
-		if f != expect {
-			return fmt.Errorf("Got %f, expected %f", f, expect)
-		}
-		return nil
-	}
-}
-
-func checkFloat32(expect float32) checker {
-	return func(wire int, field []byte) error {
-		f, err := ParseFloat32(wire, field)
-		if err != nil {
-			return err
-		}
-		if f != expect {
-			return fmt.Errorf("Got %f, expected %f", f, expect)
-		}
-		return nil
-	}
-}
-
-func TestExtractField(t *testing.T) {
-	// See: _gen/cmd/gen.go to see where data comes from
-	cases := []struct {
-		pbfile string
-		checks []check
-	}{
-		{
-			"testdata/person_john.bin",
-			[]check{
-				{[]int32{1}, false, checkString("John")},
-				{[]int32{2}, false, checkInt32(123)},
-				{[]int32{3}, false, checkString("john@doe.com")},
-				{[]int32{4}, true, nil},
-			},
-		},
-		{
-			"testdata/employee_marmot.bin",
-			[]check{
-				// Title from top level
-				{[]int32{1}, false, checkString("COO")},
-				// Embeded Person struct
-				{[]int32{2, 1}, false, checkString("Mr. Marmot")},
-				{[]int32{2, 2}, false, checkInt32(-37)},
-				{[]int32{2, 3}, true, nil},
-			},
-		},
-		{
-			"testdata/mixed.bin",
-			[]check{
-				{[]int32{1}, false, checkFloat32(1.234)},
-				{[]int32{2}, false, checkFloat64(-56.78)},
-				{[]int32{3}, false, checkInt32(654321)},
-				{[]int32{4}, false, checkInt64(-8877665544332211)},
-				{[]int32{5}, false, checkUint32(87654)},
-				{[]int32{6}, false, checkUint64(1122334455667788)},
-				{[]int32{7}, false, checkSint32(162)},
-				{[]int32{8}, false, checkSint64(-835)},
-				{[]int32{9}, false, checkUint32(19734562)},
-				{[]int32{10}, false, checkUint64(2926733)},
-				{[]int32{11}, false, checkInt32(-38919)},
-				{[]int32{12}, false, checkInt64(20472732987)},
-				{[]int32{13}, false, checkInt32(1)},
-				{[]int32{14}, false, checkString("Hello")},
-				{[]int32{15}, false, checkBytes([]byte{17, 32, 16, 0, 4})},
-				{[]int32{16}, false, checkInt32(3)},
-			},
-		},
-	}
-
-	for i, tc := range cases {
-		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
-			bz, err := ioutil.ReadFile(tc.pbfile)
-			require.NoError(t, err)
-			for j, check := range tc.checks {
-				field, wire, err := check.extractPath(bz)
-				if check.isMissing {
-					assert.Error(t, err, "%d", j)
-				} else if assert.NoError(t, err, "%d", j) {
-					err = check.eval(wire, field)
-					assert.NoError(t, err, "%d", j)
-				}
-			}
-		})
-	}
-}
 
 func TestUnpackSint(t *testing.T) {
 	cases := []struct {
@@ -243,5 +26,212 @@ func TestUnpackSint(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
 			assert.Equal(t, tc.out, UnpackSint(tc.in))
 		})
+	}
+}
+
+func TestExtractField(t *testing.T) {
+	// See: _gen/cmd/gen.go to see where data comes from
+	cases := []struct {
+		pbfile string
+		checks []check
+	}{
+		// test simplest struct
+		0: {
+			"testdata/person_john.bin",
+			[]check{
+				{[]int32{1}, false, assertString("John")},
+				{[]int32{2}, false, assertInt32(123)},
+				{[]int32{3}, false, assertString("john@doe.com")},
+				{[]int32{4}, true, nil},
+			},
+		},
+		// test embedded struct
+		1: {
+			"testdata/employee_marmot.bin",
+			[]check{
+				// Title from top level
+				{[]int32{1}, false, assertString("COO")},
+				// Embeded Person struct
+				{[]int32{2, 1}, false, assertString("Mr. Marmot")},
+				{[]int32{2, 2}, false, assertInt32(-37)},
+				{[]int32{2, 3}, true, nil},
+			},
+		},
+		// test all primative types
+		2: {
+			"testdata/mixed.bin",
+			[]check{
+				{[]int32{1}, false, assertFloat32(1.234)},
+				{[]int32{2}, false, assertFloat64(-56.78)},
+				{[]int32{3}, false, assertInt32(654321)},
+				{[]int32{4}, false, assertInt64(-8877665544332211)},
+				{[]int32{5}, false, assertUint32(87654)},
+				{[]int32{6}, false, assertUint64(1122334455667788)},
+				{[]int32{7}, false, assertSint32(162)},
+				{[]int32{8}, false, assertSint64(-835)},
+				{[]int32{9}, false, assertUint32(19734562)},
+				{[]int32{10}, false, assertUint64(2926733)},
+				{[]int32{11}, false, assertInt32(-38919)},
+				{[]int32{12}, false, assertInt64(20472732987)},
+				{[]int32{13}, false, assertInt32(1)},
+				{[]int32{14}, false, assertString("Hello")},
+				{[]int32{15}, false, assertBytes([]byte{17, 32, 16, 0, 4})},
+				{[]int32{16}, false, assertInt32(3)},
+			},
+		},
+		// this tests use of repeated fields
+		3: {
+			"testdata/phonebook.bin",
+			[]check{
+				{[]int32{1}, false, assertString("Friends")},
+				// by defaulit only gets first field....
+				// TODO: get them all
+				{[]int32{2, 1}, false, assertString("John")},
+				{[]int32{2, 2}, false, assertString("123-4567")},
+				// handle packed repeated fields for varint
+				{[]int32{3}, false, assertRepeatedInt(
+					WireVarint,
+					[]int64{532, -344, 3454230, 543, -234})},
+				//handle packed repeated fields for fixedint
+				{[]int32{4}, false, assertRepeatedUint(
+					WireFixed32,
+					[]uint64{123, 4567, 846273})},
+				// and this is normal...
+				{[]int32{5}, false, assertInt32(34)},
+			},
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+			bz, err := ioutil.ReadFile(tc.pbfile)
+			require.NoError(t, err)
+			for j, check := range tc.checks {
+				field, wire, err := check.extractPath(bz)
+				if check.isMissing {
+					assert.Error(t, err, "%d", j)
+				} else if assert.NoError(t, err, "%d", j) {
+					check.eval(t, wire, field)
+				}
+			}
+		})
+	}
+}
+
+type check struct {
+	path      []int32
+	isMissing bool
+	eval      checker
+}
+
+func (c check) extractPath(bz []byte) ([]byte, int, error) {
+	return ExtractPath(bz, c.path[0], c.path[1:]...)
+}
+
+type checker func(*testing.T, int, []byte)
+
+func assertString(expect string) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		if !assert.Equal(t, wire, WireLengthPrefix) {
+			return
+		}
+		str, err := ParseString(field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, str)
+	}
+}
+
+func assertBytes(expect []byte) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		if !assert.Equal(t, wire, WireLengthPrefix) {
+			return
+		}
+		bz, err := ParseBytesField(field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, bz)
+	}
+}
+
+func assertInt32(expect int32) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		i, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, int32(i))
+	}
+}
+
+func assertInt64(expect int64) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		i, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, int64(i))
+	}
+}
+
+func assertSint32(expect int32) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		raw, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, int32(UnpackSint(raw)))
+	}
+}
+
+func assertSint64(expect int64) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		raw, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, int64(UnpackSint(raw)))
+	}
+}
+
+func assertUint32(expect uint32) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		i, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, uint32(i))
+	}
+}
+
+func assertUint64(expect uint64) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		i, _, err := ParseAnyInt(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, i)
+	}
+}
+
+func assertFloat64(expect float64) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		f, err := ParseFloat64(wire, field)
+		assert.NoError(t, err)
+		assert.InEpsilon(t, expect, f, 0.0001)
+	}
+}
+
+func assertFloat32(expect float32) checker {
+	return func(t *testing.T, wire int, field []byte) {
+		f, err := ParseFloat32(wire, field)
+		assert.NoError(t, err)
+		assert.InEpsilon(t, expect, f, 0.0001)
+	}
+}
+
+func assertRepeatedUint(wire int, expect []uint64) checker {
+	return func(t *testing.T, _ int, field []byte) {
+		vals, err := ParsePackedRepeated(wire, field)
+		assert.NoError(t, err)
+		assert.Equal(t, expect, vals)
+	}
+}
+
+func assertRepeatedInt(wire int, expect []int64) checker {
+	return func(t *testing.T, _ int, field []byte) {
+		raws, err := ParsePackedRepeated(wire, field)
+		vals := make([]int64, len(raws))
+		for i := range raws {
+			vals[i] = int64(raws[i])
+		}
+		assert.NoError(t, err)
+		assert.Equal(t, expect, vals)
 	}
 }

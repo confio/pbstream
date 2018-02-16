@@ -50,6 +50,20 @@ var outputs = []struct {
 		},
 		"mixed.bin",
 	},
+	{
+		&data.PhoneBook{
+			Title:  "Friends",
+			Views:  34,
+			Random: []int64{532, -344, 3454230, 543, -234},
+			Codes:  []uint32{123, 4567, 846273},
+			Numbers: []*data.PhoneNumber{
+				&data.PhoneNumber{"John", "123-4567"},
+				&data.PhoneNumber{"Jane", "444-1234"},
+				&data.PhoneNumber{"Sammy", "55-666-7777"},
+			},
+		},
+		"phonebook.bin",
+	},
 }
 
 func main() {

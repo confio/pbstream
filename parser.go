@@ -99,6 +99,46 @@ func ParseString(bz []byte) (string, error) {
 	return string(field), err
 }
 
+// ParsePackedRepeated handles case when many
+// small varints are packed into one field.
+//
+// Note that the wire type of the field will always be 2 (WireLengthPrefix)
+// However, we need to know (out-of-bound info) what kind
+// of encoding was used for each number:
+// WireVarint, WireFixed64, WireFixed32
+//
+// See: https://developers.google.com/protocol-buffers/docs/encoding#packed
+func ParsePackedRepeated(wire int, bz []byte) ([]uint64, error) {
+	data, err := ParseBytesField(bz)
+	if err != nil {
+		return nil, err
+	}
+
+	// pre-allocate a reasonable amount of space
+	var bytesPerNum int
+	switch wire {
+	case WireFixed32:
+		bytesPerNum = 4
+	case WireFixed64:
+		bytesPerNum = 8
+	case WireVarint:
+		bytesPerNum = 2
+	}
+	res := make([]uint64, 0, len(data)/bytesPerNum)
+
+	// now, let's keep getting more....
+	for len(data) > 0 {
+		val, offset, err := ParseAnyInt(wire, data)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, val)
+		data = data[offset:]
+	}
+
+	return res, nil
+}
+
 // UnpackSint takes the raw bytes from ParseAnyInt and
 // and unpacks them as needed if they were encoded
 // with sint32 or sint64
