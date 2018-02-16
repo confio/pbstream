@@ -134,6 +134,32 @@ func checkUint64(expect uint64) checker {
 	}
 }
 
+func checkFloat64(expect float64) checker {
+	return func(wire int, field []byte) error {
+		f, err := ParseFloat64(wire, field)
+		if err != nil {
+			return err
+		}
+		if f != expect {
+			return fmt.Errorf("Got %f, expected %f", f, expect)
+		}
+		return nil
+	}
+}
+
+func checkFloat32(expect float32) checker {
+	return func(wire int, field []byte) error {
+		f, err := ParseFloat32(wire, field)
+		if err != nil {
+			return err
+		}
+		if f != expect {
+			return fmt.Errorf("Got %f, expected %f", f, expect)
+		}
+		return nil
+	}
+}
+
 func TestExtractField(t *testing.T) {
 	// See: _gen/cmd/gen.go to see where data comes from
 	cases := []struct {
@@ -163,8 +189,8 @@ func TestExtractField(t *testing.T) {
 		{
 			"testdata/mixed.bin",
 			[]check{
-				// {[]int32{1}, false, checkDouble("1.234")},
-				// {[]int32{2}, false, checkFloat(56.78)},
+				{[]int32{1}, false, checkFloat32(1.234)},
+				{[]int32{2}, false, checkFloat64(-56.78)},
 				{[]int32{3}, false, checkInt32(654321)},
 				{[]int32{4}, false, checkInt64(-8877665544332211)},
 				{[]int32{5}, false, checkUint32(87654)},

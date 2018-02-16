@@ -18,8 +18,8 @@ message Employee {
 // Mixed tries to express all basic protobuf fields
 // Use to test we support all types
 message Mixed {
-    double dbl = 1;
-    float flt = 2;
+    float flt = 1;
+    double dbl = 2;
     int32 i32 = 3;
     int64 i64 = 4;
     uint32 u32 = 5;

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/pkg/errors"
 )
@@ -81,6 +82,8 @@ func ExtractPath(bz []byte, next int32, rest ...int32) ([]byte, int, error) {
 	return ExtractPath(bz, next, rest...)
 }
 
+// ParseBytesField takes a WireLengthPrefix field, and
+// extracts the contents into a byte slice
 func ParseBytesField(bz []byte) ([]byte, error) {
 	size, offset, err := parseVarUint(bz)
 	if err != nil {
@@ -89,11 +92,16 @@ func ParseBytesField(bz []byte) ([]byte, error) {
 	return bz[offset : offset+int(size)], nil
 }
 
+// ParseString takes a WireLengthPrefix field, and
+// extracts the contents into a string
 func ParseString(bz []byte) (string, error) {
 	field, err := ParseBytesField(bz)
 	return string(field), err
 }
 
+// UnpackSint takes the raw bytes from ParseAnyInt and
+// and unpacks them as needed if they were encoded
+// with sint32 or sint64
 func UnpackSint(raw uint64) int64 {
 	neg := raw&0x1 == 1
 	val := int64(raw >> 1)
@@ -101,6 +109,30 @@ func UnpackSint(raw uint64) int64 {
 		val = -val - 1
 	}
 	return val
+}
+
+// ParseFloat64 can decode double fields
+func ParseFloat64(wireType int, bz []byte) (float64, error) {
+	if wireType != WireFixed64 {
+		return 0, errors.Errorf("Unknown wireType for ParseFloat64: %d", wireType)
+	}
+	if len(bz) < 8 {
+		return 0, errors.Errorf("Double but %d bytes", len(bz))
+	}
+	val := binary.LittleEndian.Uint64(bz)
+	return math.Float64frombits(val), nil
+}
+
+// ParseFloat32 can decode double fields
+func ParseFloat32(wireType int, bz []byte) (float32, error) {
+	if wireType != WireFixed32 {
+		return 0, errors.Errorf("Unknown wireType for ParseFloat32: %d", wireType)
+	}
+	if len(bz) < 4 {
+		return 0, errors.Errorf("Float but %d bytes", len(bz))
+	}
+	val := binary.LittleEndian.Uint32(bz)
+	return math.Float32frombits(val), nil
 }
 
 // ParseAnyInt parses any int field,
