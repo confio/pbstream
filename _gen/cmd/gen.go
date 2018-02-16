@@ -19,6 +19,16 @@ var outputs = []struct {
 		&data.Person{Name: "John", Age: 123, Email: "john@doe.com"},
 		"person_john.bin",
 	},
+	{
+		&data.Employee{
+			Title: "COO",
+			Person: &data.Person{
+				Name: "Mr. Marmot",
+				Age:  37,
+			},
+		},
+		"employee_marmot.bin",
+	},
 }
 
 func main() {

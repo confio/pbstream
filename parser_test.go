@@ -10,8 +10,9 @@ import (
 )
 
 type check struct {
-	path []int32
-	eval checker
+	path      []int32
+	isMissing bool
+	eval      checker
 }
 
 func (c check) extractPath(bz []byte) ([]byte, error) {
@@ -47,6 +48,7 @@ func checkInt32(expect int32) checker {
 }
 
 func TestExtractField(t *testing.T) {
+	// See: _gen/cmd/gen.go to see where data comes from
 	cases := []struct {
 		pbfile string
 		checks []check
@@ -54,9 +56,21 @@ func TestExtractField(t *testing.T) {
 		{
 			"testdata/person_john.bin",
 			[]check{
-				{[]int32{1}, checkString("John")},
-				{[]int32{2}, checkInt32(123)},
-				{[]int32{3}, checkString("john@doe.com")},
+				{[]int32{1}, false, checkString("John")},
+				{[]int32{2}, false, checkInt32(123)},
+				{[]int32{3}, false, checkString("john@doe.com")},
+				{[]int32{4}, true, nil},
+			},
+		},
+		{
+			"testdata/employee_marmot.bin",
+			[]check{
+				// Title from top level
+				{[]int32{1}, false, checkString("COO")},
+				// Embeded Person struct
+				{[]int32{2, 1}, false, checkString("Mr. Marmot")},
+				{[]int32{2, 2}, false, checkInt32(37)},
+				{[]int32{2, 3}, true, nil},
 			},
 		},
 	}
@@ -67,7 +81,9 @@ func TestExtractField(t *testing.T) {
 			require.NoError(t, err)
 			for j, check := range tc.checks {
 				field, err := check.extractPath(bz)
-				if assert.NoError(t, err, "%d", j) {
+				if check.isMissing {
+					assert.Error(t, err, "%d", j)
+				} else if assert.NoError(t, err, "%d", j) {
 					err = check.eval(field)
 					assert.NoError(t, err, "%d", j)
 				}
