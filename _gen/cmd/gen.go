@@ -24,10 +24,31 @@ var outputs = []struct {
 			Title: "COO",
 			Person: &data.Person{
 				Name: "Mr. Marmot",
-				Age:  37,
+				Age:  -37,
 			},
 		},
 		"employee_marmot.bin",
+	},
+	{
+		&data.Mixed{
+			Dbl:  1.234,
+			Flt:  56.78,
+			I32:  654321,
+			I64:  -8877665544332211,
+			U32:  87654,
+			U64:  1122334455667788,
+			S32:  162,
+			S64:  -835,
+			F32:  19734562,
+			F64:  2926733,
+			Sf32: -38919,
+			Sf64: 20472732987,
+			B:    true,
+			S:    "Hello",
+			Bz:   []byte{17, 32, 16, 0, 4},
+			En:   data.Mixed_LOCAL,
+		},
+		"mixed.bin",
 	},
 }
 

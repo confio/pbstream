@@ -16,7 +16,8 @@ type check struct {
 }
 
 func (c check) extractPath(bz []byte) ([]byte, error) {
-	return ExtractPath(bz, c.path[0], c.path[1:]...)
+	bz, _, err := ExtractPath(bz, c.path[0], c.path[1:]...)
+	return bz, err
 }
 
 type checker func([]byte) error
@@ -69,10 +70,31 @@ func TestExtractField(t *testing.T) {
 				{[]int32{1}, false, checkString("COO")},
 				// Embeded Person struct
 				{[]int32{2, 1}, false, checkString("Mr. Marmot")},
-				{[]int32{2, 2}, false, checkInt32(37)},
+				{[]int32{2, 2}, false, checkInt32(-37)},
 				{[]int32{2, 3}, true, nil},
 			},
 		},
+		// {
+		// 	"testdata/mixed.bin",
+		// 	[]check{
+		// 		// {[]int32{1}, false, checkDouble("1.234")},
+		// 		// {[]int32{2}, false, checkFloat(56.78)},
+		// 		{[]int32{3}, false, checkInt(654321)},
+		// 		{[]int32{4}, false, checkInt(-8877665544332211)},
+		// 		{[]int32{5}, false, checkUint(87654)},
+		// 		{[]int32{6}, false, checkUint(1122334455667788)},
+		// 		{[]int32{7}, false, checkInt(162)},
+		// 		{[]int32{8}, false, checkInt(-835)},
+		// 		{[]int32{9}, false, checkUint(19734562)},
+		// 		{[]int32{10}, false, checkUint(2926733)},
+		// 		{[]int32{11}, false, checkInt(-38919)},
+		// 		{[]int32{12}, false, checkInt(20472732987)},
+		// 		// {[]int32{13}, false, checkBool(true)},
+		// 		{[]int32{14}, false, checkString("Hello")},
+		// 		// {[]int32{15}, false, checkBytes([]byte{17, 32, 16, 0, 4})},
+		// 		{[]int32{16}, false, checkInt(3)},
+		// 	},
+		// },
 	}
 
 	for i, tc := range cases {
