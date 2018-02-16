@@ -13,6 +13,15 @@ var (
 	ErrIntOverflowSample   = fmt.Errorf("proto: integer overflow")
 )
 
+const (
+	WireVarint       int = 0
+	WireFixed64          = 1
+	WireLengthPrefix     = 2
+	WireBeginGroup       = 3 // deprecated
+	WireEndGroup         = 4 // deprecated
+	WireFixed32          = 5
+)
+
 // ExtractField goes through this object, field by field until we
 // find the field we want.
 //
@@ -121,17 +130,17 @@ func ParseString(bz []byte) (string, error) {
 // uses wire type to determine how to parse the bytes
 func ParseAnyInt(wireType int, bz []byte) (val uint64, offset int, err error) {
 	switch wireType {
-	case 0: // varint
+	case WireVarint:
 		val, offset, err := parseVarUint(bz)
 		return val, offset, err
-	case 1: // fixed64
-		if len(bz) != 8 {
+	case WireFixed64:
+		if len(bz) < 8 {
 			return 0, 0, errors.Errorf("Fixed64 but %d bytes", len(bz))
 		}
 		val := binary.LittleEndian.Uint64(bz)
 		return val, 8, nil
-	case 5: // fixed32
-		if len(bz) != 4 {
+	case WireFixed32:
+		if len(bz) < 4 {
 			return 0, 0, errors.Errorf("Fixed32 but %d bytes", len(bz))
 		}
 		val := binary.LittleEndian.Uint32(bz)
@@ -189,17 +198,17 @@ func skipField(bz []byte) (size int, err error) {
 	i += offset
 
 	switch wireType {
-	case 0: // varint
+	case WireVarint:
 		_, offset, err = ParseUint64(bz[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += offset
 		return i, nil
-	case 1: // fixed 64 byte
+	case WireFixed64:
 		i += 8
 		return i, nil
-	case 2: // length-delimited
+	case WireLengthPrefix:
 		size, offset, err := ParseInt(bz[i:])
 		if err != nil {
 			return 0, err
@@ -209,7 +218,7 @@ func skipField(bz []byte) (size int, err error) {
 		}
 		i += offset + size
 		return i, nil
-	case 3: // begin group (deprecated)
+	case WireBeginGroup: // (deprecated)
 		for {
 			// we stop if it hits 4, and return up to that point
 			_, _, innerWireType, err := parseFieldHeader(bz[i:])
@@ -224,9 +233,9 @@ func skipField(bz []byte) (size int, err error) {
 			i += next
 		}
 		return i, nil
-	case 4: // end group
+	case WireEndGroup: // (deprecated)
 		return i, nil
-	case 5: // fixed 32 bit field (fixed32, float)
+	case WireFixed32:
 		i += 4
 		return i, nil
 	default:
