@@ -121,16 +121,16 @@ func TestExtractField(t *testing.T) {
 type check struct {
 	path      []int32
 	isMissing bool
-	eval      checker
+	eval      assertion
 }
 
 func (c check) extractPath(bz []byte) ([]byte, int, error) {
 	return ExtractPath(bz, c.path[0], c.path[1:]...)
 }
 
-type checker func(*testing.T, int, []byte)
+type assertion func(*testing.T, int, []byte)
 
-func assertString(expect string) checker {
+func assertString(expect string) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		if !assert.Equal(t, wire, WireLengthPrefix) {
 			return
@@ -141,7 +141,7 @@ func assertString(expect string) checker {
 	}
 }
 
-func assertBytes(expect []byte) checker {
+func assertBytes(expect []byte) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		if !assert.Equal(t, wire, WireLengthPrefix) {
 			return
@@ -152,7 +152,7 @@ func assertBytes(expect []byte) checker {
 	}
 }
 
-func assertInt32(expect int32) checker {
+func assertInt32(expect int32) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		i, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -160,7 +160,7 @@ func assertInt32(expect int32) checker {
 	}
 }
 
-func assertInt64(expect int64) checker {
+func assertInt64(expect int64) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		i, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -168,7 +168,7 @@ func assertInt64(expect int64) checker {
 	}
 }
 
-func assertSint32(expect int32) checker {
+func assertSint32(expect int32) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		raw, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -176,7 +176,7 @@ func assertSint32(expect int32) checker {
 	}
 }
 
-func assertSint64(expect int64) checker {
+func assertSint64(expect int64) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		raw, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -184,7 +184,7 @@ func assertSint64(expect int64) checker {
 	}
 }
 
-func assertUint32(expect uint32) checker {
+func assertUint32(expect uint32) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		i, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -192,7 +192,7 @@ func assertUint32(expect uint32) checker {
 	}
 }
 
-func assertUint64(expect uint64) checker {
+func assertUint64(expect uint64) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		i, _, err := ParseAnyInt(wire, field)
 		assert.NoError(t, err)
@@ -200,7 +200,7 @@ func assertUint64(expect uint64) checker {
 	}
 }
 
-func assertFloat64(expect float64) checker {
+func assertFloat64(expect float64) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		f, err := ParseFloat64(wire, field)
 		assert.NoError(t, err)
@@ -208,7 +208,7 @@ func assertFloat64(expect float64) checker {
 	}
 }
 
-func assertFloat32(expect float32) checker {
+func assertFloat32(expect float32) assertion {
 	return func(t *testing.T, wire int, field []byte) {
 		f, err := ParseFloat32(wire, field)
 		assert.NoError(t, err)
@@ -216,7 +216,7 @@ func assertFloat32(expect float32) checker {
 	}
 }
 
-func assertRepeatedUint(wire int, expect []uint64) checker {
+func assertRepeatedUint(wire int, expect []uint64) assertion {
 	return func(t *testing.T, _ int, field []byte) {
 		vals, err := ParsePackedRepeated(wire, field)
 		assert.NoError(t, err)
@@ -224,7 +224,7 @@ func assertRepeatedUint(wire int, expect []uint64) checker {
 	}
 }
 
-func assertRepeatedInt(wire int, expect []int64) checker {
+func assertRepeatedInt(wire int, expect []int64) assertion {
 	return func(t *testing.T, _ int, field []byte) {
 		raws, err := ParsePackedRepeated(wire, field)
 		vals := make([]int64, len(raws))

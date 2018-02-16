@@ -17,3 +17,32 @@ field of a message before sending it along.
 Another application is an HSM, such as ledger, that wants to
 display information from one or two fields, before signing
 the raw bytes.
+
+The public API attempts to be minimal, and [can be viewed on godoc.](https://godoc.org/github.com/ethanfrey/pbstream)
+
+Basic parsing for protobuf objects:
+
+- [x] Extract field by number
+- [x] Extract embedded fields by following path of field numbers
+- [x] Parse varints
+- [x] Parse fixed ints
+- [x] Parse floats
+- [x] Parse strings and bytes
+- [x] Parse enums / bools (as int32)
+- [x] Unpack sint32/64
+- [x] Parse packed repeated fields (series of numbers)
+- [ ] Parse repeated structs
+- [ ] Parse fields embedded inside repeated structs
+- [ ] Produce iterator-like parser for repeated
+
+Handle ugly data:
+- [ ] Properly handle repeated copies of non-repeated fields (last write wins)
+- [ ] Validate with multiple protoc encoders
+- [ ] Fuzz results alongside real proto.Unmarshal
+
+Minimize memory usage:
+- [x] Only store pointer to original buffer
+- [x] Allocate only on parsing numeric types
+- [ ] Handle repeated types with iterator
+- [ ] Allow parsing input stream (not even have original structure in memory)
+- [ ] Port to minimal ANSI C for embedded systems
