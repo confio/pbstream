@@ -5,6 +5,11 @@ import (
 	"io"
 )
 
+var (
+	ErrInvalidLengthSample = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowSample   = fmt.Errorf("proto: integer overflow")
+)
+
 // ExtractField goes through this object, field by field until we
 // find the field we want.
 func ExtractField(bz []byte, field int32) ([]byte, error) {
@@ -182,7 +187,7 @@ func skipField(bz []byte) (size int, err error) {
 				return i, nil
 			}
 			// otherwise, keep skipping the entries in the group
-			next, err := skipSample(bz[i:])
+			next, err := skipField(bz[i:])
 			if err != nil {
 				return 0, err
 			}
