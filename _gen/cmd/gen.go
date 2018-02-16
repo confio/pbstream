@@ -1,3 +1,6 @@
+/*
+Package main generates testdata
+*/
 package main
 
 import (

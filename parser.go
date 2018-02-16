@@ -1,3 +1,13 @@
+/*
+Package pbstream will extract arbitrary data from a protobuf
+encoded message, using only the field indentifiers as arguments
+(not even the original .proto file). It should use minimal
+memory and resources and return just the desired field without
+parsing the whole structure.
+
+Please see the test cases for usage examples until we improve
+the documentation.
+*/
 package pbstream
 
 import (
