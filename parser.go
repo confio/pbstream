@@ -81,49 +81,26 @@ func ExtractPath(bz []byte, next int32, rest ...int32) ([]byte, int, error) {
 	return ExtractPath(bz, next, rest...)
 }
 
-func ParseInt64(bz []byte) (wire int64, offset int, err error) {
-	var uwire uint64
-	uwire, offset, err = parseVarUint(bz)
-	wire = int64(uwire)
-	return
-}
-
-func ParseInt32(bz []byte) (wire int32, offset int, err error) {
-	var uwire uint64
-	uwire, offset, err = parseVarUint(bz)
-	wire = int32(uwire)
-	return
-}
-
-func ParseInt(bz []byte) (wire int, offset int, err error) {
-	var uwire uint64
-	uwire, offset, err = parseVarUint(bz)
-	wire = int(uwire)
-	return
-}
-
-func ParseUint64(bz []byte) (wire uint64, offset int, err error) {
-	return parseVarUint(bz)
-}
-
-func ParseUint32(bz []byte) (wire uint32, offset int, err error) {
-	var uwire uint64
-	uwire, offset, err = parseVarUint(bz)
-	wire = uint32(uwire)
-	return
-}
-
 func ParseBytesField(bz []byte) ([]byte, error) {
-	size, offset, err := ParseInt(bz)
+	size, offset, err := parseVarUint(bz)
 	if err != nil {
 		return nil, err
 	}
-	return bz[offset : offset+size], nil
+	return bz[offset : offset+int(size)], nil
 }
 
 func ParseString(bz []byte) (string, error) {
 	field, err := ParseBytesField(bz)
 	return string(field), err
+}
+
+func UnpackSint(raw uint64) int64 {
+	neg := raw&0x1 == 1
+	val := int64(raw >> 1)
+	if neg {
+		val = -val - 1
+	}
+	return val
 }
 
 // ParseAnyInt parses any int field,
@@ -176,7 +153,7 @@ func parseVarUint(bz []byte) (wire uint64, offset int, err error) {
 
 func parseFieldHeader(bz []byte) (offset int, fieldNum int32, wireType int, err error) {
 	var wire uint64
-	wire, offset, err = ParseUint64(bz)
+	wire, offset, err = parseVarUint(bz)
 	if err != nil {
 		return
 	}
@@ -199,7 +176,7 @@ func skipField(bz []byte) (size int, err error) {
 
 	switch wireType {
 	case WireVarint:
-		_, offset, err = ParseUint64(bz[i:])
+		_, offset, err = parseVarUint(bz[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -209,14 +186,14 @@ func skipField(bz []byte) (size int, err error) {
 		i += 8
 		return i, nil
 	case WireLengthPrefix:
-		size, offset, err := ParseInt(bz[i:])
+		size, offset, err := parseVarUint(bz[i:])
 		if err != nil {
 			return 0, err
 		}
 		if size < 0 {
 			return 0, ErrInvalidLengthSample
 		}
-		i += offset + size
+		i += offset + int(size)
 		return i, nil
 	case WireBeginGroup: // (deprecated)
 		for {

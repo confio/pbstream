@@ -1,6 +1,7 @@
 package pbstream
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -37,6 +38,22 @@ func checkString(expect string) checker {
 	}
 }
 
+func checkBytes(expect []byte) checker {
+	return func(wire int, field []byte) error {
+		if wire != WireLengthPrefix {
+			return fmt.Errorf("Invalid wire type: %d", wire)
+		}
+		bz, err := ParseBytesField(field)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(bz, expect) {
+			return fmt.Errorf("Got %x, expected %x", bz, expect)
+		}
+		return nil
+	}
+}
+
 func checkInt32(expect int32) checker {
 	return func(wire int, field []byte) error {
 		i, _, err := ParseAnyInt(wire, field)
@@ -58,6 +75,34 @@ func checkInt64(expect int64) checker {
 		}
 		if int64(i) != expect {
 			return fmt.Errorf("Got %d, expected %d", int64(i), expect)
+		}
+		return nil
+	}
+}
+
+func checkSint32(expect int32) checker {
+	return func(wire int, field []byte) error {
+		raw, _, err := ParseAnyInt(wire, field)
+		if err != nil {
+			return err
+		}
+		i := int32(UnpackSint(raw))
+		if i != expect {
+			return fmt.Errorf("Got %d, expected %d", i, expect)
+		}
+		return nil
+	}
+}
+
+func checkSint64(expect int64) checker {
+	return func(wire int, field []byte) error {
+		raw, _, err := ParseAnyInt(wire, field)
+		if err != nil {
+			return err
+		}
+		i := int64(UnpackSint(raw))
+		if i != expect {
+			return fmt.Errorf("Got %d, expected %d", i, expect)
 		}
 		return nil
 	}
@@ -124,15 +169,15 @@ func TestExtractField(t *testing.T) {
 				{[]int32{4}, false, checkInt64(-8877665544332211)},
 				{[]int32{5}, false, checkUint32(87654)},
 				{[]int32{6}, false, checkUint64(1122334455667788)},
-				// {[]int32{7}, false, checkInt32(162)},
-				// {[]int32{8}, false, checkInt(-835)},
+				{[]int32{7}, false, checkSint32(162)},
+				{[]int32{8}, false, checkSint64(-835)},
 				{[]int32{9}, false, checkUint32(19734562)},
 				{[]int32{10}, false, checkUint64(2926733)},
 				{[]int32{11}, false, checkInt32(-38919)},
 				{[]int32{12}, false, checkInt64(20472732987)},
-				// {[]int32{13}, false, checkBool(true)},
+				{[]int32{13}, false, checkInt32(1)},
 				{[]int32{14}, false, checkString("Hello")},
-				// {[]int32{15}, false, checkBytes([]byte{17, 32, 16, 0, 4})},
+				{[]int32{15}, false, checkBytes([]byte{17, 32, 16, 0, 4})},
 				{[]int32{16}, false, checkInt32(3)},
 			},
 		},
@@ -151,6 +196,26 @@ func TestExtractField(t *testing.T) {
 					assert.NoError(t, err, "%d", j)
 				}
 			}
+		})
+	}
+}
+
+func TestUnpackSint(t *testing.T) {
+	cases := []struct {
+		in  uint64
+		out int64
+	}{
+		{0, 0},
+		{1, -1},
+		{2, 1},
+		{3, -2},
+		{4294967294, 2147483647},
+		{4294967295, -2147483648},
+	}
+
+	for i, tc := range cases {
+		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+			assert.Equal(t, tc.out, UnpackSint(tc.in))
 		})
 	}
 }
