@@ -31,7 +31,7 @@ Basic parsing for protobuf objects:
 - [x] Parse enums / bools (as int32)
 - [x] Unpack sint32/64
 - [x] Parse packed repeated fields (series of numbers)
-- [ ] Parse one-of fields
+- [x] Parse one-of fields
 - [ ] Parse repeated structs
 - [ ] Parse fields embedded inside repeated structs
 - [ ] Produce iterator-like parser for repeated

@@ -109,7 +109,7 @@ func TestExtractField(t *testing.T) {
 				{[]int32{1, 1}, false, assertInt64(500)},
 				{[]int32{1, 2}, false, assertString("PHO")},
 				// check sendtx: recpt and amount
-				{[]int32{2, 2}, false, assertBytes([]byte("qwertyuiopasdfghjkl;"))},
+				{[]int32{2, 2}, false, assertBytes([]byte{0x74, 0x23, 0x12, 0x63, 0x82})},
 				{[]int32{2, 3, 1}, false, assertInt64(18500)},
 				{[]int32{2, 3, 2}, false, assertString("ATOM")},
 				// missing
@@ -149,6 +149,65 @@ func TestExtractField(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ExampleExtractPath documents parsing a tx
+//
+// Code to create it in _gen/cmd/gen.go
+//
+//   &data.Tx{
+//       Fee: &data.Coin{
+//           Amount: 500,
+//           Denom:  "PHO",
+//       },
+//       Msg: &data.Tx_Send{
+//           &data.SendMsg{
+//               Sender:    []byte("12345678901234567890"),
+//               Recipient: []byte{0x74, 0x23, 0x12, 0x63, 0x82},
+//               Amount: &data.Coin{
+//                   Amount: 18500,
+//                   Denom:  "ATOM",
+//               },
+//           },
+//       },
+//   },
+//   "send_msg.bin",
+//
+// Spec in https://github.com/confio/pbstream/blob/master/_gen/sendtx.proto
+func ExampleExtractPath() {
+	// In real code, you would check those errors....
+	bz, _ := ioutil.ReadFile("testdata/send_msg.bin")
+
+	// get the fee bytes
+	raw, wireType, _ := ExtractPath(bz, 1, 1)
+	feeAmt, _, _ := ParseAnyInt(wireType, raw)
+	raw, _, _ = ExtractPath(bz, 1, 2)
+	feeDenom, _ := ParseString(raw)
+	fmt.Printf("Fee: %d %s\n", feeAmt, feeDenom)
+
+	// check if it is sendTx
+	raw, _, err := ExtractField(bz, 2)
+	if err != nil {
+		fmt.Println("Not send msg")
+	} else {
+		sendMsg, _ := ParseBytesField(raw)
+		raw, _, _ = ExtractField(sendMsg, 2)
+		rcpt, _ := ParseBytesField(raw)
+		raw, wireType, _ = ExtractPath(sendMsg, 3, 1)
+		sendAmt, _, _ := ParseAnyInt(wireType, raw)
+		raw, _, _ = ExtractPath(sendMsg, 3, 2)
+		sendDenom, _ := ParseString(raw)
+		fmt.Printf("SendTx: %d %s to %X\n", sendAmt, sendDenom, rcpt)
+	}
+
+	_, _, err = ExtractField(bz, 3)
+	if err != nil {
+		fmt.Println("Not issue msg")
+	}
+
+	// Output: Fee: 500 PHO
+	// SendTx: 18500 ATOM to 7423126382
+	// Not issue msg
 }
 
 type check struct {

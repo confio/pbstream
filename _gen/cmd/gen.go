@@ -76,7 +76,7 @@ var outputs = []struct {
 			Msg: &data.Tx_Send{
 				&data.SendMsg{
 					Sender:    []byte("12345678901234567890"),
-					Recipient: []byte("qwertyuiopasdfghjkl;"),
+					Recipient: []byte{0x74, 0x23, 0x12, 0x63, 0x82},
 					Amount: &data.Coin{
 						Amount: 18500,
 						Denom:  "ATOM",
