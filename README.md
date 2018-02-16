@@ -18,7 +18,7 @@ Another application is an HSM, such as ledger, that wants to
 display information from one or two fields, before signing
 the raw bytes.
 
-The public API attempts to be minimal, and [can be viewed on godoc.](https://godoc.org/github.com/ethanfrey/pbstream)
+The public API attempts to be minimal, and [can be viewed on godoc.](https://godoc.org/github.com/confio/pbstream)
 
 Basic parsing for protobuf objects:
 
