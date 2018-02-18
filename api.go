@@ -26,8 +26,17 @@ func (s *Struct) Bytes(i int) []byte {
 	if s == nil {
 		return nil
 	}
-	// TODO
-	return nil
+	bz, _, err := ExtractField(s.data, int32(i))
+	if err != nil {
+		s.err.Add(err)
+		return nil
+	}
+	res, err := ParseBytesField(bz)
+	if err != nil {
+		s.err.Add(err)
+		return nil
+	}
+	return res
 }
 
 func (s *Struct) String(i int) string {
@@ -39,16 +48,25 @@ func (s *Struct) Number(i int) Number {
 	if s == nil {
 		return Number(0)
 	}
-	// TODO
-	return Number(0)
+	bz, wireType, err := ExtractField(s.data, int32(i))
+	if err != nil {
+		s.err.Add(err)
+		return Number(0)
+	}
+	val, _, err := ParseAnyInt(wireType, bz)
+	if err != nil {
+		s.err.Add(err)
+		return Number(0)
+	}
+	return Number(val)
 }
 
 func (s *Struct) Struct(i int) *Struct {
 	if s == nil {
 		return nil
 	}
-	// TODO
-	return nil
+	bz := s.Bytes(i)
+	return Parse(bz)
 }
 
 // OneOf will find the first field that matches any of those choices
@@ -117,6 +135,14 @@ func (n Number) Int64() int64 {
 
 func (n Number) Int32() int32 {
 	return int32(n)
+}
+
+func (n Number) Uint64() uint64 {
+	return uint64(n)
+}
+
+func (n Number) Uint32() uint32 {
+	return uint32(n)
 }
 
 func (n Number) Bool() bool {
