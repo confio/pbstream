@@ -7,61 +7,67 @@ import (
 )
 
 // Parse takes a message and begins the parsing....
-func Parse(bz []byte) *Field {
-	return &Field{
+func Parse(bz []byte) *Struct {
+	return &Struct{
 		data: bz,
 	}
 }
 
-// Field is a set of bytes being parsed.
+// Struct is a set of bytes being parsed.
 // It can store and detect error
-type Field struct {
+type Struct struct {
 	data  []byte
 	index int // current distance read, advances each call
 	err   *multierror
 	// TODO: bitmask of viewed/Repeated fields
 }
 
-func (f *Field) Bytes(i int) []byte {
-	if f == nil {
+func (s *Struct) Bytes(i int) []byte {
+	if s == nil {
 		return nil
 	}
 	// TODO
 	return nil
 }
 
-func (f *Field) String(i int) string {
+func (s *Struct) String(i int) string {
 	// TODO
-	return string(f.Bytes(i))
+	return string(s.Bytes(i))
 }
 
-func (f *Field) Number(i int) Number {
-	if f == nil {
+func (s *Struct) Number(i int) Number {
+	if s == nil {
 		return Number(0)
 	}
 	// TODO
 	return Number(0)
 }
 
-func (f *Field) Field(i int) *Field {
-	if f == nil {
+func (s *Struct) Struct(i int) *Struct {
+	if s == nil {
 		return nil
 	}
 	// TODO
 	return nil
 }
 
-func (f *Field) Error() error {
-	if f == nil {
+// OneOf will find the first field that matches any of those choices
+func (s *Struct) OneOf(choices ...int) (*Struct, int) {
+	// TODO
+	return nil, 0
+}
+
+func (s *Struct) Error() error {
+	if s == nil {
 		// TODO: return error not found?????
 		return nil
 	}
-	return f.err.Resolve()
+	return s.err.Resolve()
 }
 
-func (f *Field) Close() error {
+func (s *Struct) Close() error {
 	// TODO: skip til end, look for dups
-	return f.Error()
+	return s.Error()
 }
 
 /*
@@ -77,11 +83,11 @@ at the field.
       return err
   }
 */
-func (f *Field) RepeatedNumber(i int) IterNum {
+func (s *Struct) RepeatedNumber(i int) IterNum {
 	return nil
 }
 
-func (f *Field) RepeatedField(i int) IterField {
+func (s *Struct) RepeatedStruct(i int) IterStruct {
 	return nil
 }
 
@@ -90,18 +96,18 @@ type IterNum interface {
 	Valid() bool
 	Next()
 	Value() Number
-	Close() error // (or stored in the parent field???)
+	Close() error // (or stored in the parent struct???)
 }
 
-// IterField allows iteration over a series of fields...
-type IterField interface {
+// IterStruct allows iteration over a series of structs...
+type IterStruct interface {
 	Valid() bool
 	Next()
-	Value() *Field
-	Close() error // (or stored in the parent field???), needed????
+	Value() *Struct
+	Close() error // (or stored in the parent struct???), needed????
 }
 
-// Number is the raw bytes parsed from a numeric field
+// Number is the raw bytes parsed from a numeric struct
 // Caller should interpret them as below
 type Number uint64
 
@@ -156,4 +162,35 @@ func (me *multierror) Error() string {
 // Fmt should work like pkg.Errors, show all sub-errors, concatentated
 func (me *multierror) Fmt() string {
 	return "TODO: combine all"
+}
+
+// Bitmask stores info for up to 32 fields,
+// Each one is represented by 2 bits:
+//
+//   * 0 - never seen, single field
+//   * 1 - already seen, error upon next seen
+//   * 2 - expect field multiple times
+//
+// Valid transitions are:
+//
+//   * 0 -> {Add, Close} -> 1
+//   * 0 -> {Repeat} -> 2
+//   * 2 -> {Add} -> 2
+//   * 2 -> {Close} -> 1
+//   * All others will return errors
+type Bitmask uint64
+
+func (b *Bitmask) Seen(i int) error {
+	// TODO
+	return nil
+}
+
+func (b *Bitmask) Close(i int) error {
+	// TODO
+	return nil
+}
+
+func (b *Bitmask) Repeat(i int) error {
+	// TODO
+	return nil
 }
