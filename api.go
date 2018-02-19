@@ -1,7 +1,9 @@
 package pbstream
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -18,8 +20,13 @@ func Parse(bz []byte) *Struct {
 type Struct struct {
 	data  []byte
 	index int // current distance read, advances each call
-	err   *multierror
+	err   multierror
 	// TODO: bitmask of viewed/Repeated fields
+}
+
+// AddError will append one more error to our result
+func (s *Struct) AddError(err error) {
+	s.err = s.err.WithError(err)
 }
 
 func (s *Struct) Bytes(i int) []byte {
@@ -28,12 +35,12 @@ func (s *Struct) Bytes(i int) []byte {
 	}
 	bz, _, err := ExtractField(s.data, int32(i))
 	if err != nil {
-		s.err.Add(err)
+		s.AddError(err)
 		return nil
 	}
 	res, err := ParseBytesField(bz)
 	if err != nil {
-		s.err.Add(err)
+		s.AddError(err)
 		return nil
 	}
 	return res
@@ -50,12 +57,12 @@ func (s *Struct) Number(i int) Number {
 	}
 	bz, wireType, err := ExtractField(s.data, int32(i))
 	if err != nil {
-		s.err.Add(err)
+		s.AddError(err)
 		return Number(0)
 	}
 	val, _, err := ParseAnyInt(wireType, bz)
 	if err != nil {
-		s.err.Add(err)
+		s.AddError(err)
 		return Number(0)
 	}
 	return Number(val)
@@ -70,9 +77,18 @@ func (s *Struct) Struct(i int) *Struct {
 }
 
 // OneOf will find the first field that matches any of those choices
-func (s *Struct) OneOf(choices ...int) (*Struct, int) {
-	// TODO
-	return nil, 0
+func (s *Struct) OneOf(choices ...int32) (*Struct, int) {
+	raw, _, field, err := extractAnyField(s.data, choices...)
+	if err != nil {
+		s.AddError(err)
+		return nil, 0
+	}
+	bz, err := ParseBytesField(raw)
+	if err != nil {
+		s.AddError(err)
+		return nil, 0
+	}
+	return Parse(bz), int(field)
 }
 
 func (s *Struct) Error() error {
@@ -160,33 +176,37 @@ func (n Number) Sint64() int64 {
 // multierror does nice handling to join errors
 type multierror []error
 
-// Add can concatonate, even for empty me
-func (me *multierror) Add(err error) *multierror {
+// WithError can concatonate, even for empty me,
+// returns new mutlierror
+func (me multierror) WithError(err error) multierror {
 	err = errors.WithStack(err)
-	var base []error
+	var base multierror
 	if me != nil {
-		base = *me
+		base = me
 	}
-	*me = append(base, err)
-	return me
+	return append(base, err)
 }
 
-func (me *multierror) Resolve() error {
-	if me == nil || len(*me) == 0 {
+func (me multierror) Resolve() error {
+	if me == nil || len(me) == 0 {
 		return nil
 	}
-	if len(*me) == 1 {
-		return (*me)[0]
+	if len(me) == 1 {
+		return me[0]
 	}
 	return me
 }
 
-func (me *multierror) Error() string {
-	return "TODO: combine all"
+func (me multierror) Error() string {
+	res := make([]string, len(me))
+	for i := range me {
+		res[i] = fmt.Sprintf("%d: %+v\n", i, me[i])
+	}
+	return strings.Join(res, "\n")
 }
 
 // Fmt should work like pkg.Errors, show all sub-errors, concatentated
-func (me *multierror) Fmt() string {
+func (me multierror) Fmt() string {
 	return "TODO: combine all"
 }
 

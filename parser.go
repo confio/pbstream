@@ -39,32 +39,42 @@ const (
 // Second return value is the field type (encoding), which can
 // be useful to extract integers
 func ExtractField(bz []byte, field int32) ([]byte, int, error) {
+	bz, wireType, match, err := extractAnyField(bz, field)
+	if err == nil && match != field {
+		return nil, 0, errors.Errorf("Extracted %d and got %d", field, match)
+	}
+	return bz, wireType, err
+}
+
+func extractAnyField(bz []byte, fields ...int32) ([]byte, int, int32, error) {
 	for len(bz) > 0 {
 		// parse the header from field type
 		offset, fieldNum, wireType, err := parseFieldHeader(bz)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, 0, err
 		}
 
 		// we got it!
-		if fieldNum == field {
-			return bz[offset:], wireType, nil
+		for _, field := range fields {
+			if fieldNum == field {
+				return bz[offset:], wireType, field, nil
+			}
 		}
 
 		// skip field
 		skippy, err := skipField(bz)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, 0, err
 		}
 		if skippy < 0 {
-			return nil, 0, errors.WithStack(ErrInvalidLengthSample)
+			return nil, 0, 0, errors.WithStack(ErrInvalidLengthSample)
 		}
 		if (skippy) > len(bz) {
-			return nil, 0, errors.WithStack(io.ErrUnexpectedEOF)
+			return nil, 0, 0, errors.WithStack(io.ErrUnexpectedEOF)
 		}
 		bz = bz[skippy:]
 	}
-	return nil, 0, errors.Errorf("Desired field %d not found", field)
+	return nil, 0, 0, errors.Errorf("Desired fields %v not found", fields)
 }
 
 // ExtractPath digs into sub-objects, selecting field #1,

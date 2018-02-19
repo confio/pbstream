@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 )
 
-func ExampleField() {
+func ExampleStruct() {
 	bz, err := ioutil.ReadFile("testdata/send_msg.bin")
 	if err != nil {
 		fmt.Println("Cannot read file")
@@ -38,6 +38,10 @@ func ExampleField() {
 		fmt.Println("Is other msg...")
 	default:
 		fmt.Printf("Unknown oneof %d\n", idx)
+	}
+	if err := msg.Close(); err != nil {
+		fmt.Printf("Msg error: %+v\n", err)
+		return
 	}
 
 	// this can check for duplicates, bad-fields
